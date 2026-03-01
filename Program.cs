@@ -1,7 +1,8 @@
 using ChallengeGenerator.Services;
-using Hangfire;
 using Hangfire.Dashboard;
+using Hangfire;
 using Hangfire.MySql;
+using System.Transactions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,7 +34,18 @@ builder.Services.AddHangfire(config => config
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
     .UseSimpleAssemblyNameTypeSerializer()
     .UseRecommendedSerializerSettings()
-    .UseStorage(new MySqlStorage(challengesDbConnection)));
+    .UseStorage(new MySqlStorage(
+    challengesDbConnection,
+    new MySqlStorageOptions
+    {
+        TransactionIsolationLevel = IsolationLevel.ReadCommitted,
+        QueuePollInterval = TimeSpan.FromSeconds(15),
+        JobExpirationCheckInterval = TimeSpan.FromHours(1),
+        CountersAggregateInterval = TimeSpan.FromMinutes(5),
+        PrepareSchemaIfNecessary = true,
+        DashboardJobListLimit = 50000,
+        TransactionTimeout = TimeSpan.FromMinutes(1),
+    })));
 
 builder.Services.AddHangfireServer();
 
