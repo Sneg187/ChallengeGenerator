@@ -13,6 +13,7 @@ builder.Services.AddSwaggerGen();
 // Register services
 builder.Services.AddSingleton<ConfigService>();
 builder.Services.AddSingleton<ChallengeGeneratorService>();
+builder.Services.AddHostedService<ConsoleCommandService>();
 
 // Build temporary service provider to load config
 var tempServiceProvider = builder.Services.BuildServiceProvider();
