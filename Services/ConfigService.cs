@@ -1,11 +1,11 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using ChallengeGenerator.Models;
 
 namespace ChallengeGenerator.Services;
 
 public class ConfigService
 {
-    private const string ConfigFileName = "database.json";
+    private const string ConfigFileName = "/home/container/database.json";  // ← Исправлено!
     private readonly ILogger<ConfigService> _logger;
 
     public ConfigService(ILogger<ConfigService> logger)
