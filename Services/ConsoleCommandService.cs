@@ -157,7 +157,7 @@ public class ConsoleCommandService : BackgroundService
 
             if (latestVersion == null)
             {
-                Console.WriteLine("[ERROR] Failed to check for updates");
+                Console.WriteLine("[WARN] Could not reach GitHub API");
                 return;
             }
 
@@ -181,8 +181,8 @@ public class ConsoleCommandService : BackgroundService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Failed to check updates: {ex.Message}");
-            _logger.LogError(ex, "Failed to check for updates");
+            Console.WriteLine($"[WARN] Failed to check updates: {ex.Message}");
+            _logger.LogDebug(ex, "Failed to check for updates");
         }
     }
 
@@ -217,12 +217,10 @@ public class ConsoleCommandService : BackgroundService
         }
         catch (HttpRequestException)
         {
-            Console.WriteLine("[WARN] Could not reach GitHub API");
             return null;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _logger.LogError(ex, "Error fetching latest version");
             return null;
         }
     }
@@ -289,7 +287,7 @@ public class ConsoleCommandService : BackgroundService
 
         Console.WriteLine($"[INFO] Updating to {version}...");
 
-        var githubUser = Environment.GetEnvironmentVariable("GITHUB_USER") ?? "YourUsername";
+        var githubUser = Environment.GetEnvironmentVariable("GITHUB_USER") ?? "Sneg187";
         var githubRepo = Environment.GetEnvironmentVariable("GITHUB_REPO") ?? "ChallengeGenerator";
 
         var url = $"https://github.com/{githubUser}/{githubRepo}/releases/download/{version}/ChallengeGenerator.zip";
@@ -307,6 +305,16 @@ public class ConsoleCommandService : BackgroundService
 
             Console.WriteLine("[INFO] Extracting files...");
 
+            // Сохранить database.json ПЕРЕД обновлением
+            var dbJsonPath = "/home/container/database.json";
+            string? dbJsonBackup = null;
+            if (File.Exists(dbJsonPath))
+            {
+                dbJsonBackup = File.ReadAllText(dbJsonPath);
+                Console.WriteLine("[INFO] Backed up database.json");
+            }
+
+            // Создать backup папку для DLL
             var backupDir = Path.Combine(AppContext.BaseDirectory, "backup");
             if (Directory.Exists(backupDir))
                 Directory.Delete(backupDir, true);
@@ -318,11 +326,20 @@ public class ConsoleCommandService : BackgroundService
                 File.Copy(file, Path.Combine(backupDir, fileName), true);
             }
 
+            // Распаковать обновление
             System.IO.Compression.ZipFile.ExtractToDirectory(tempZip, AppContext.BaseDirectory, true);
+
+            // Восстановить database.json ПОСЛЕ обновления
+            if (dbJsonBackup != null)
+            {
+                File.WriteAllText(dbJsonPath, dbJsonBackup);
+                Console.WriteLine("[INFO] Restored database.json");
+            }
 
             File.Delete(tempZip);
 
-            Console.WriteLine("[SUCCESS] Update downloaded successfully!");
+            Console.WriteLine("[SUCCESS] Update completed successfully!");
+            Console.WriteLine("[INFO] database.json was preserved");
             Console.WriteLine("[INFO] Restarting application in 3 seconds...");
 
             await Task.Delay(3000);
@@ -354,21 +371,25 @@ public class ConsoleCommandService : BackgroundService
 
         try
         {
+            // БЕЗ SslMode=none!
             using var connection = new MySql.Data.MySqlClient.MySqlConnection(
-                $"Server={dbConfig.Host};Port={dbConfig.Port};Database={dbConfig.ChallengesDatabase};User={dbConfig.User};Password={dbConfig.Password};SslMode=none;");
+                $"Server={dbConfig.Host};Port={dbConfig.Port};Database={dbConfig.ChallengesDatabase};User={dbConfig.User};Password={dbConfig.Password};");
 
             await connection.OpenAsync();
             Console.WriteLine($"  [OK] Database: Connected ({dbConfig.Host}:{dbConfig.Port})");
             connection.Close();
         }
-        catch
+        catch (Exception ex)
         {
-            Console.WriteLine($"  [ERROR] Database: Connection failed");
+            Console.WriteLine($"  [ERROR] Database: Connection failed - {ex.Message}");
         }
 
         Console.WriteLine($"  [OK] Hangfire: Running");
         Console.WriteLine($"  [OK] API: Running");
         Console.WriteLine($"  [OK] Config: database.json loaded");
+
+        var port = Environment.GetEnvironmentVariable("SERVER_PORT") ?? "5000";
+        Console.WriteLine($"  [OK] Port: {port}");
         Console.WriteLine();
     }
 
