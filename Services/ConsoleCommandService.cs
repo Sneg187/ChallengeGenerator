@@ -290,7 +290,7 @@ public class ConsoleCommandService : BackgroundService
         var githubUser = Environment.GetEnvironmentVariable("GITHUB_USER") ?? "Sneg187";
         var githubRepo = Environment.GetEnvironmentVariable("GITHUB_REPO") ?? "ChallengeGenerator";
 
-        var url = $"https://github.com/{githubUser}/{githubRepo}/releases/download/{version}/ChallengeGenerator.zip";
+        var url = $"https://github.com/{githubUser}/{githubRepo}/releases/download/{version}/ChallengeGenerator-{version.TrimStart('v')}.zip";
 
         try
         {
