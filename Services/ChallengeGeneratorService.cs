@@ -51,7 +51,7 @@ public class ChallengeGeneratorService
 
             result.Success = true;
             result.Message = $"Successfully generated {result.NormalChallengesCreated} normal and {result.PremiumChallengesCreated} premium challenges";
-            
+
             _logger.LogInformation("[Generator] {Message}", result.Message);
         }
         catch (Exception ex)
@@ -91,8 +91,8 @@ public class ChallengeGeneratorService
             // Определяем сложность на основе цели
             var difficulty = DetermineDifficulty(targetCount, eventConfig.DifficultyThresholds);
 
-            // Вычисляем награду
-            var rewardValue = CalculateReward(eventType, targetCount, difficulty);
+            // Вычисляем награду (передаём isPremium для фиксированного режима)
+            var rewardValue = CalculateReward(eventType, targetCount, difficulty, isPremium);
 
             // Выбираем случайное оружие (если есть)
             string? weapon = null;
@@ -182,8 +182,15 @@ public class ChallengeGeneratorService
         return "medium"; // По умолчанию
     }
 
-    private int CalculateReward(string eventType, int targetCount, string difficulty)
+    private int CalculateReward(string eventType, int targetCount, string difficulty, int isPremium)
     {
+        // Режим фиксированных наград
+        if (_config.UseFixedRewards)
+        {
+            return isPremium == 1 ? _config.FixedRewardPremium : _config.FixedRewardNormal;
+        }
+
+        // Режим динамических наград (на основе сложности)
         if (!_config.Events.TryGetValue(eventType, out var eventConfig))
             return _config.MinReward;
 

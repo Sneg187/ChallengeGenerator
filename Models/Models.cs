@@ -27,6 +27,13 @@ public class GeneratorConfig
     public int PremiumChallengesCount { get; set; } = 5;
     public string ServerMode { get; set; } = "dm";
     public int KCoinRate { get; set; } = 10000;
+
+    // Режим наград
+    public bool UseFixedRewards { get; set; } = false;  // false = динамический, true = фиксированный
+    public int FixedRewardNormal { get; set; } = 100;   // Фиксированная награда для normal
+    public int FixedRewardPremium { get; set; } = 200;  // Фиксированная награда для premium
+
+    // Динамический режим
     public Dictionary<string, EventConfig> Events { get; set; } = new();
     public Dictionary<string, double> DifficultyMultipliers { get; set; } = new();
     public int MinReward { get; set; } = 3000;

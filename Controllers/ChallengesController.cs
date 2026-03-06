@@ -102,13 +102,16 @@ public class ChallengesController : ControllerBase
     public IActionResult Health()
     {
         var version = Assembly.GetExecutingAssembly().GetName().Version;
-        var versionString = $"v{version?.Major}.{version?.Minor}.{version?.Build}";
+        var informationalVersion = Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion ?? version?.ToString() ?? "Unknown";
 
         return Ok(new
         {
             status = "healthy",
             timestamp = DateTime.UtcNow,
-            version = versionString  // ← Автоматически из .csproj
+            version = informationalVersion,
+            dotnetVersion = Environment.Version.ToString()
         });
     }
 
@@ -136,6 +139,65 @@ public class ChallengesController : ControllerBase
         {
             _logger.LogError(ex, "Failed to get generator settings");
             return StatusCode(500, new { error = "Failed to get generator settings" });
+        }
+    }
+
+    /// <summary>
+    /// Update appsettings.json configuration
+    /// </summary>
+    [HttpPut("appsettings")]
+    public IActionResult UpdateAppSettings([FromBody] System.Text.Json.JsonElement config)
+    {
+        try
+        {
+            var appSettingsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+
+            // Читаем текущий appsettings.json
+            var currentJson = System.IO.File.ReadAllText(appSettingsPath);
+            var currentConfig = System.Text.Json.JsonDocument.Parse(currentJson);
+
+            // Красиво форматируем и сохраняем новый JSON
+            var options = new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true
+            };
+
+            var jsonString = System.Text.Json.JsonSerializer.Serialize(config, options);
+            System.IO.File.WriteAllText(appSettingsPath, jsonString);
+
+            _logger.LogInformation("[API] appsettings.json updated");
+
+            return Ok(new
+            {
+                message = "Settings updated successfully. Please restart the server for changes to take effect.",
+                success = true
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update appsettings.json");
+            return StatusCode(500, new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Get full appsettings.json content
+    /// </summary>
+    [HttpGet("appsettings")]
+    public IActionResult GetAppSettings()
+    {
+        try
+        {
+            var appSettingsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+            var json = System.IO.File.ReadAllText(appSettingsPath);
+            var config = System.Text.Json.JsonDocument.Parse(json);
+
+            return Ok(config.RootElement);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to read appsettings.json");
+            return StatusCode(500, new { error = ex.Message });
         }
     }
 }
